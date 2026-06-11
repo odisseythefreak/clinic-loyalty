@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Панель администратора | Google Sheets</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 32px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #2E8B57;
+            font-size: 1.5rem;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        .sync-badge {
+            display: inline-block;
+            background: #dcfce7;
+            color: #166534;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            margin-top: 8px;
+        }
+
+        .scanner-card {
+            background: white;
+            border-radius: 32px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .scanner-title {
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: 24px;
+            overflow: hidden;
+            background: #f1f5f9;
+        }
+
+        .scan-status {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .scan-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .scan-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .patient-card {
+            background: white;
+            border-radius: 32px;
+            padding: 24px;
+            margin-top: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .patient-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .patient-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .patient-phone {
+            color: #64748b;
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        .edit-icon {
+            background: #f1f5f9;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 24px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #2E8B57;
+        }
+
+        .level-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .level-novice { background: #e2e8f0; color: #475569; }
+        .level-active { background: #4caf50; color: white; }
+        .level-vip { background: linear-gradient(135deg, #ffd700, #ffb347); color: #333; }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            border: none;
+            border-radius: 60px;
+            padding: 14px 0;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: #2E8B57;
+            color: white;
+        }
+
+        .btn-primary:active {
+            background: #1f6e43;
+            transform: scale(0.97);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+
+        .history-item {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 20px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .history-date {
+            color: #94a3b8;
+            font-size: 0.7rem;
+        }
+
+        .manual-input {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .manual-input input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 30px;
+            font-size: 0.85rem;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 60px;
+            z-index: 1000;
+            animation: fadeInOut 2s ease;
+            font-size: 0.85rem;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        }
+
+        .all-patients {
+            margin-top: 20px;
+            background: white;
+            border-radius: 32px;
+            padding: 20px;
+        }
+
+        .all-patients h3 {
+            margin-bottom: 12px;
+            color: #1e293b;
+        }
+
+        .patient-list-item {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .patient-list-item:hover {
+            background: #f1f5f9;
+        }
+
+        .patient-list-name {
+            font-weight: 600;
+        }
+
+        .patient-list-phone {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🔍 Панель администратора</h1>
+        <p>Сканируйте QR-код пациента для управления картой лояльности</p>
+        <div class="sync-badge" id="syncBadge">☁️ Google Sheets синхронизация</div>
+    </div>
+
+    <div class="scanner-card">
+        <div class="scanner-title">
+            📷 Сканер QR-кода
+        </div>
+        <div id="reader"></div>
+        <div id="scanStatus" class="scan-status"></div>
+        
+        <div class="manual-input">
+            <input type="text" id="manualPatientId" placeholder="Или введите ID пациента вручную">
+            <button id="manualFindBtn" class="btn-secondary" style="padding: 12px 20px;">🔍 Найти</button>
+        </div>
+    </div>
+
+    <div id="patientInfoContainer" style="display: none;"></div>
+
+    <div class="all-patients" id="allPatientsContainer">
+        <h3>📋 Все пациенты</h3>
+        <div id="allPatientsList">Загрузка...</div>
+    </div>
+</div>
+
+<script>
+    // ==================== ВСТАВЬТЕ ВАШУ GOOGLE SCRIPT URL ЗДЕСЬ ====================
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRxqVARJi1xXVtU_6jtkOcpgmmD2xCqzSVCxv8HS7RRWFstZpZLlBZe-N9LbroSEXamA/exec";
+    // ====================================================================
+
+    let currentPatientId = null;
+    let html5QrCode = null;
+    let patientsList = [];
+
+    const BONUS_PER_VISIT = 100;
+    const REDEEM_COST = 200;
+    const LEVELS = [
+        { name: "Новичок", minVisits: 0, multiplier: 1, class: "level-novice" },
+        { name: "Активный пациент", minVisits: 3, multiplier: 1.1, class: "level-active" },
+        { name: "VIP", minVisits: 8, multiplier: 1.2, class: "level-vip" }
+    ];
+
+    function getLevel(visits) {
+        let current = LEVELS[0];
+        for (let i = LEVELS.length-1; i >= 0; i--) {
+            if (visits >= LEVELS[i].minVisits) current = LEVELS[i];
+        }
+        return current;
+    }
+
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // Загрузка всех пациентов из Google Sheets
+    async function loadAllPatients() {
+        try {
+            const response = await fetch(GOOGLE_SCRIPT_URL);
+            const patients = await response.json();
+            patientsList = patients;
+            renderPatientsList();
+            return patients;
+        } catch(e) {
+            console.error("Ошибка загрузки:", e);
+            return [];
+        }
+    }
+
+    // Сохранение пациента в Google Sheets
+    async function savePatient(patient) {
+        try {
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(patient)
+            });
+            return true;
+        } catch(e) {
+            console.error("Ошибка сохранения:", e);
+            return false;
+        }
+    }
+
+    // Добавить визит
+    async function addVisit() {
+        if (!currentPatientId) {
+            showToast("❌ Пациент не выбран");
+            return;
+        }
+        
+        const patient = patientsList.find(p => p.id === currentPatientId);
+        if (!patient) {
+            showToast("❌ Пациент не найден");
+            return;
+        }
+        
+        const oldLevel = getLevel(patient.visits);
+        const earnedBonus = Math.floor(BONUS_PER_VISIT * oldLevel.multiplier);
+        
+        const now = new Date();
+        const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        
+        let history = [];
+        if (typeof patient.history === 'string') {
+            try { history = JSON.parse(patient.history); } catch(e) { history = []; }
+        } else if (Array.isArray(patient.history)) {
+            history = patient.history;
+        }
+        
+        const newHistory = [
+            {
+                text: `✅ Визит №${patient.visits + 1} · Начислено ${earnedBonus} бонусов (x${oldLevel.multiplier})`,
+                date: dateStr,
+                points: earnedBonus,
+                type: "add"
+            },
+            ...history
+        ];
+        
+        const newVisits = patient.visits + 1;
+        const newBonus = patient.bonusPoints + earnedBonus;
+        const newLevel = getLevel(newVisits);
+        
+        if (newLevel.name !== oldLevel.name) {
+            newHistory.unshift({
+                text: `⭐ Повышение статуса: ${newLevel.name}! ⭐`,
+                date: dateStr,
+                points: 0,
+                type: "levelup"
+            });
+        }
+        
+        const updatedPatient = {
+            ...patient,
+            visits: newVisits,
+            bonusPoints: newBonus,
+            history: JSON.stringify(newHistory.slice(0, 30)),
+            updatedAt: now.toISOString()
+        };
+        
+        await savePatient(updatedPatient);
+        await loadAllPatients();
+        await loadAndDisplayPatient(currentPatientId);
+        showToast(`✅ Визит добавлен! +${earnedBonus} бонусов`);
+    }
+
+    // Списать бонусы
+    async function redeemBonus() {
+        if (!currentPatientId) {
+            showToast("❌ Пациент не выбран");
+            return;
+        }
+        
+        const patient = patientsList.find(p => p.id === currentPatientId);
+        if (!patient) return;
+        
+        if (patient.bonusPoints >= REDEEM_COST) {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            
+            let history = [];
+            if (typeof patient.history === 'string') {
+                try { history = JSON.parse(patient.history); } catch(e) { history = []; }
+            } else if (Array.isArray(patient.history)) {
+                history = patient.history;
+            }
+            
+            const newHistory = [
+                {
+                    text: `💸 Списано ${REDEEM_COST} бонусов · Скидка 500₽ на приём`,
+                    date: dateStr,
+                    points: -REDEEM_COST,
+                    type: "redeem"
+                },
+                ...history
+            ];
+            
+            const updatedPatient = {
+                ...patient,
+                bonusPoints: patient.bonusPoints - REDEEM_COST,
+                history: JSON.stringify(newHistory.slice(0, 30)),
+                updatedAt: now.toISOString()
+            };
+            
+            await savePatient(updatedPatient);
+            await loadAllPatients();
+            await loadAndDisplayPatient(currentPatientId);
+            showToast(`🎁 Списано ${REDEEM_COST} бонусов, скидка применена`);
+        } else {
+            showToast(`❌ Недостаточно бонусов! У пациента ${patient.bonusPoints}, нужно ${REDEEM_COST}`);
+        }
+    }
+
+    // Редактировать пациента
+    async function editPatient() {
+        const patient = patientsList.find(p => p.id === currentPatientId);
+        if (!patient) return;
+        
+        const newName = prompt("Введите ФИО пациента:", patient.name);
+        if (newName && newName.trim()) {
+            patient.name = newName.trim();
+            patient.updatedAt = new Date().toISOString();
+            await savePatient(patient);
+            await loadAllPatients();
+            await loadAndDisplayPatient(currentPatientId);
+            showToast("✅ Данные обновлены");
+        }
+        
+        const newPhone = prompt("Введите телефон пациента:", patient.phone);
+        if (newPhone && newPhone.trim()) {
+            patient.phone = newPhone.trim();
+            patient.updatedAt = new Date().toISOString();
+            await savePatient(patient);
+            await loadAllPatients();
+            await loadAndDisplayPatient(currentPatientId);
+            showToast("✅ Данные обновлены");
+        }
+    }
+
+    // Загрузить и отобразить карту пациента
+    async function loadAndDisplayPatient(patientId) {
+        const patient = patientsList.find(p => p.id === patientId);
+        if (!patient) return;
+        
+        currentPatientId = patientId;
+        
+        let history = [];
+        if (typeof patient.history === 'string') {
+            try { history = JSON.parse(patient.history); } catch(e) { history = []; }
+        } else if (Array.isArray(patient.history)) {
+            history = patient.history;
+        }
+        
+        const level = getLevel(patient.visits);
+        const container = document.getElementById("patientInfoContainer");
+        
+        container.innerHTML = `
+            <div class="patient-card">
+                <div class="patient-header">
+                    <div>
+                        <div class="patient-name">${escapeHtml(patient.name)}</div>
+                        <div class="patient-phone">📞 ${escapeHtml(patient.phone)}</div>
+                    </div>
+                    <button class="edit-icon" onclick="editPatient()">✏️ Редактировать</button>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-label">🎁 Бонусы</div>
+                        <div class="stat-value">${patient.bonusPoints}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">📅 Визитов</div>
+                        <div class="stat-value">${patient.visits}</div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <span class="level-badge ${level.class}">${level.name}</span>
+                    <div style="font-size:0.75rem; color:#64748b; margin-top: 8px;">
+                        ⭐ За след. визит: +${Math.floor(BONUS_PER_VISIT * level.multiplier)} бонусов
+                    </div>
+                </div>
+                
+                <div class="actions">
+                    <button class="btn btn-primary" id="adminAddVisitBtn">➕ Записать визит</button>
+                    <button class="btn btn-secondary" id="adminRedeemBtn">🎁 Списать 200 бонусов</button>
+                </div>
+                
+                <div>
+                    <div style="font-weight: 600; margin-bottom: 12px;">📋 История операций</div>
+                    <div class="history-list" id="adminHistoryList">
+                        ${history.length > 0 ? history.slice(0, 15).map(h => `
+                            <div class="history-item">
+                                <span>${escapeHtml(h.text)}</span>
+                                <span class="history-date">${h.date}</span>
+                            </div>
+                        `).join('') : '<div class="history-item">История пуста</div>'}
+                    </div>
+                </div>
+                
+                <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size:0.7rem; color:#94a3b8; text-align: center;">
+                    🆔 ID: ${patient.id}
+                </div>
+            </div>
+        `;
+        
+        container.style.display = "block";
+        
+        document.getElementById("adminAddVisitBtn").addEventListener("click", addVisit);
+        document.getElementById("adminRedeemBtn").addEventListener("click", redeemBonus);
+    }
+
+    // Отображение списка пациентов
+    function renderPatientsList() {
+        const container = document.getElementById("allPatientsList");
+        if (!patientsList || patientsList.length === 0) {
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: #94a3b8;">Нет пациентов</div>';
+            return;
+        }
+        
+        container.innerHTML = patientsList.map(patient => `
+            <div class="patient-list-item" onclick="selectPatient('${patient.id}')">
+                <div>
+                    <div class="patient-list-name">${escapeHtml(patient.name)}</div>
+                    <div class="patient-list-phone">${escapeHtml(patient.phone)}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.8rem; font-weight: 600; color: #2E8B57;">${patient.bonusPoints} бон.</div>
+                    <div style="font-size: 0.7rem; color: #64748b;">${patient.visits} виз.</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.selectPatient = async function(patientId) {
+        await loadAndDisplayPatient(patientId);
+        showToast(`✅ Выбран: ${patientsList.find(p => p.id === patientId)?.name}`);
+        stopScanner();
+    }
+
+    // Обработка сканирования QR
+    async function onScanSuccess(decodedText) {
+        try {
+            const data = JSON.parse(decodedText);
+            if (data.type === "clinic_card" && data.patientId) {
+                const patient = patientsList.find(p => p.id === data.patientId);
+                if (patient) {
+                    await loadAndDisplayPatient(patient.id);
+                    document.getElementById("scanStatus").innerHTML = `✅ Найден пациент: ${patient.name}`;
+                    document.getElementById("scanStatus").className = "scan-status scan-success";
+                    stopScanner();
+                } else {
+                    document.getElementById("scanStatus").innerHTML = `❌ Пациент с ID ${data.patientId} не найден`;
+                    document.getElementById("scanStatus").className = "scan-status scan-error";
+                }
+            } else {
+                document.getElementById("scanStatus").innerHTML = `❌ Неверный QR-код`;
+                document.getElementById("scanStatus").className = "scan-status scan-error";
+            }
+        } catch(e) {
+            document.getElementById("scanStatus").innerHTML = `❌ Ошибка чтения QR-кода`;
+            document.getElementById("scanStatus").className = "scan-status scan-error";
+        }
+    }
+
+    async function startScanner() {
+        if (html5QrCode) {
+            await html5QrCode.stop();
+        }
+        
+        html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        try {
+            await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (error) => {});
+        } catch(err) {
+            document.getElementById("scanStatus").innerHTML = `❌ Нет доступа к камере`;
+            document.getElementById("scanStatus").className = "scan-status scan-error";
+        }
+    }
+
+    async function stopScanner() {
+        if (html5QrCode) {
+            await html5QrCode.stop();
+            html5QrCode = null;
+        }
+    }
+
+    // Ручной поиск
+    async function findPatientById() {
+        const manualId = document.getElementById("manualPatientId").value.trim();
+        if (!manualId) {
+            showToast("Введите ID пациента");
+            return;
+        }
+        
+        const patient = patientsList.find(p => p.id === manualId);
+        if (patient) {
+            await loadAndDisplayPatient(patient.id);
+            showToast(`✅ Пациент найден: ${patient.name}`);
+            stopScanner();
+        } else {
+            showToast(`❌ Пациент с ID ${manualId} не найден`);
+        }
+    }
+
+    // Инициализация
+    document.addEventListener("DOMContentLoaded", async () => {
+        await loadAllPatients();
+        startScanner();
+        
+        document.getElementById("manualFindBtn").addEventListener("click", findPatientById);
+        document.getElementById("manualPatientId").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") findPatientById();
+        });
+        
+        // Автообновление списка пациентов каждые 10 секунд
+        setInterval(async () => {
+            await loadAllPatients();
+        }, 10000);
+    });
+</script>
+</body>
+</html>

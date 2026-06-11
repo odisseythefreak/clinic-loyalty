@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Моя карта лояльности</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            max-width: 450px;
+            width: 100%;
+            background: white;
+            border-radius: 48px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #1A5F7A, #2E8B57);
+            padding: 32px 24px;
+            color: white;
+            text-align: center;
+        }
+
+        .clinic-name {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            letter-spacing: 1px;
+        }
+
+        .patient-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 12px 0 6px;
+            word-break: break-word;
+            cursor: pointer;
+        }
+
+        .patient-phone {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            cursor: pointer;
+        }
+
+        .qr-section {
+            padding: 32px;
+            text-align: center;
+            background: white;
+        }
+
+        .qr-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 16px;
+            font-size: 1rem;
+        }
+
+        #qrcode {
+            display: flex;
+            justify-content: center;
+            margin: 16px 0;
+        }
+
+        .patient-id {
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 12px;
+            word-break: break-all;
+        }
+
+        .bonus-section {
+            background: #F8FAFE;
+            margin: 16px;
+            padding: 24px;
+            border-radius: 32px;
+            text-align: center;
+        }
+
+        .bonus-label {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .bonus-amount {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #2E8B57;
+            line-height: 1;
+            margin: 8px 0;
+        }
+
+        .visits-count {
+            color: #475569;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .level-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        .level-novice { background: #e2e8f0; color: #475569; }
+        .level-active { background: #4caf50; color: white; }
+        .level-vip { background: linear-gradient(135deg, #ffd700, #ffb347); color: #333; }
+
+        .history-section {
+            padding: 0 24px 24px 24px;
+        }
+
+        .history-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #334155;
+        }
+
+        .history-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 20px;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-text {
+            flex: 1;
+        }
+
+        .history-date {
+            color: #94a3b8;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+
+        .footer-note {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .sync-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #2E8B57;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 100;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            z-index: 200;
+            animation: fadeOut 2s ease;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            70% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        }
+
+        .edit-icon {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 30px;
+            padding: 4px 12px;
+            color: white;
+            font-size: 0.7rem;
+            margin-left: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="card" id="card">
+        <div class="card-header">
+            <div class="clinic-name">🏥 МЕДИЦИНСКИЙ ЦЕНТР «ЗДОРОВЬЕ+»</div>
+            <div class="patient-name" id="patientName">
+                Загрузка...
+                <span class="edit-icon" id="editNameBtn">✏️</span>
+            </div>
+            <div class="patient-phone" id="patientPhone">
+                Загрузка...
+                <span class="edit-icon" id="editPhoneBtn">✏️</span>
+            </div>
+        </div>
+
+        <div class="qr-section">
+            <div class="qr-label">🎫 Ваш персональный QR-код</div>
+            <div id="qrcode"></div>
+            <div class="patient-id" id="patientId"></div>
+            <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 12px;">
+                Покажите этот QR-код администратору
+            </div>
+        </div>
+
+        <div class="bonus-section">
+            <div class="bonus-label">🎁 Бонусный баланс</div>
+            <div class="bonus-amount" id="bonusAmount">0</div>
+            <div class="visits-count">📅 Всего визитов: <span id="visitsCount">0</span></div>
+            <div id="levelBadge" class="level-badge level-novice">Новичок</div>
+        </div>
+
+        <div class="history-section">
+            <div class="history-title">📋 Последние операции</div>
+            <div class="history-list" id="historyList">
+                <div class="history-item">Загрузка истории...</div>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            💚 1 визит = +100 бонусов (до x1.2 в VIP-статусе)<br>
+            200 бонусов = скидка 500₽ на приём
+        </div>
+    </div>
+
+    <div class="sync-status" id="syncStatus">
+        <span>☁️</span> <span id="syncText">Google Sheets</span>
+    </div>
+
+    <script>
+        // ==================== ВСТАВЬТЕ ВАШУ GOOGLE SCRIPT URL ЗДЕСЬ ====================
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRxqVARJi1xXVtU_6jtkOcpgmmD2xCqzSVCxv8HS7RRWFstZpZLlBZe-N9LbroSEXamA/exec";
+        // ====================================================================
+
+        let currentPatientId = null;
+        let updateInterval = null;
+
+        const BONUS_PER_VISIT = 100;
+        const REDEEM_COST = 200;
+        const LEVELS = [
+            { name: "Новичок", minVisits: 0, multiplier: 1, class: "level-novice" },
+            { name: "Активный пациент", minVisits: 3, multiplier: 1.1, class: "level-active" },
+            { name: "VIP", minVisits: 8, multiplier: 1.2, class: "level-vip" }
+        ];
+
+        function getLevel(visits) {
+            let current = LEVELS[0];
+            for (let i = LEVELS.length-1; i >= 0; i--) {
+                if (visits >= LEVELS[i].minVisits) current = LEVELS[i];
+            }
+            return current;
+        }
+
+        function generatePatientId() {
+            return 'PAT-' + Date.now() + '-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        // Загрузка данных пациента из Google Sheets
+        async function loadPatientFromCloud(patientId) {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL);
+                const patients = await response.json();
+                const patient = patients.find(p => p.id === patientId);
+                return patient || null;
+            } catch(e) {
+                console.error("Ошибка загрузки:", e);
+                return null;
+            }
+        }
+
+        // Сохранение данных пациента в Google Sheets
+        async function savePatientToCloud(patient) {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(patient)
+                });
+                return true;
+            } catch(e) {
+                console.error("Ошибка сохранения:", e);
+                return false;
+            }
+        }
+
+        // Загрузка всех пациентов (для поиска своего ID)
+        async function getAllPatients() {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL);
+                return await response.json();
+            } catch(e) {
+                return [];
+            }
+        }
+
+        // Рендер UI
+        function renderUI(patient) {
+            if (!patient) return;
+            
+            const nameSpan = document.getElementById("patientName");
+            nameSpan.childNodes[0].nodeValue = patient.name;
+            const phoneSpan = document.getElementById("patientPhone");
+            phoneSpan.childNodes[0].nodeValue = patient.phone;
+            document.getElementById("bonusAmount").innerHTML = `${patient.bonusPoints} <small style="font-size:1rem;">баллов</small>`;
+            document.getElementById("visitsCount").textContent = patient.visits;
+            
+            const level = getLevel(patient.visits);
+            const levelBadge = document.getElementById("levelBadge");
+            levelBadge.textContent = level.name;
+            levelBadge.className = `level-badge ${level.class}`;
+            
+            // QR-код
+            const qrDiv = document.getElementById("qrcode");
+            qrDiv.innerHTML = "";
+            const qrData = JSON.stringify({ type: "clinic_card", patientId: patient.id });
+            new QRCode(qrDiv, {
+                text: qrData,
+                width: 200,
+                height: 200,
+                colorDark: "#2E8B57",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            document.getElementById("patientId").textContent = `ID: ${patient.id}`;
+            
+            // История
+            let history = [];
+            if (typeof patient.history === 'string') {
+                try {
+                    history = JSON.parse(patient.history);
+                } catch(e) { history = []; }
+            } else if (Array.isArray(patient.history)) {
+                history = patient.history;
+            }
+            
+            const historyDiv = document.getElementById("historyList");
+            if (history && history.length > 0) {
+                historyDiv.innerHTML = history.slice(0, 15).map(h => `
+                    <div class="history-item">
+                        <span class="history-text">${escapeHtml(h.text)}</span>
+                        <span class="history-date">${h.date}</span>
+                    </div>
+                `).join('');
+            } else {
+                historyDiv.innerHTML = '<div class="history-item">История операций пуста</div>';
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Синхронизация данных
+        async function syncData() {
+            if (!currentPatientId) return;
+            
+            const cloudPatient = await loadPatientFromCloud(currentPatientId);
+            if (cloudPatient) {
+                const localPatient = JSON.parse(localStorage.getItem("localPatientData") || "{}");
+                
+                // Проверяем, нужно ли обновить локальные данные
+                if (!localPatient.updatedAt || cloudPatient.updatedAt > localPatient.updatedAt) {
+                    renderUI(cloudPatient);
+                    localStorage.setItem("localPatientData", JSON.stringify(cloudPatient));
+                    document.getElementById("syncText").innerHTML = "✅ Синхронизировано";
+                    setTimeout(() => {
+                        if (document.getElementById("syncText").innerHTML === "✅ Синхронизировано") {
+                            document.getElementById("syncText").innerHTML = "Google Sheets";
+                        }
+                    }, 2000);
+                }
+            }
+        }
+
+        // Инициализация пациента
+        async function initPatient() {
+            let patientId = localStorage.getItem("googlePatientId");
+            
+            if (patientId) {
+                const patient = await loadPatientFromCloud(patientId);
+                if (patient) {
+                    currentPatientId = patientId;
+                    renderUI(patient);
+                    localStorage.setItem("localPatientData", JSON.stringify(patient));
+                    return;
+                }
+            }
+            
+            // Создаём нового пациента
+            const newPatientId = generatePatientId();
+            const newPatient = {
+                id: newPatientId,
+                name: "Новый пациент",
+                phone: "+7 (___) ___-__-__",
+                visits: 0,
+                bonusPoints: 0,
+                updatedAt: new Date().toISOString(),
+                history: JSON.stringify([
+                    { text: "🎉 Карта лояльности активирована", date: new Date().toLocaleString(), points: 0, type: "info" }
+                ])
+            };
+            
+            await savePatientToCloud(newPatient);
+            localStorage.setItem("googlePatientId", newPatientId);
+            localStorage.setItem("localPatientData", JSON.stringify(newPatient));
+            currentPatientId = newPatientId;
+            renderUI(newPatient);
+            showToast("🎉 Карта создана! Данные сохранены в Google Sheets");
+        }
+
+        // Редактирование имени
+        async function editName() {
+            const patient = await loadPatientFromCloud(currentPatientId);
+            if (!patient) return;
+            
+            const newName = prompt("Введите ваше имя:", patient.name);
+            if (newName && newName.trim()) {
+                patient.name = newName.trim();
+                patient.updatedAt = new Date().toISOString();
+                await savePatientToCloud(patient);
+                renderUI(patient);
+                localStorage.setItem("localPatientData", JSON.stringify(patient));
+                showToast("✅ Имя обновлено");
+            }
+        }
+
+        // Редактирование телефона
+        async function editPhone() {
+            const patient = await loadPatientFromCloud(currentPatientId);
+            if (!patient) return;
+            
+            const newPhone = prompt("Введите номер телефона:", patient.phone);
+            if (newPhone && newPhone.trim()) {
+                patient.phone = newPhone.trim();
+                patient.updatedAt = new Date().toISOString();
+                await savePatientToCloud(patient);
+                renderUI(patient);
+                localStorage.setItem("localPatientData", JSON.stringify(patient));
+                showToast("✅ Телефон обновлён");
+            }
+        }
+
+        // Инициализация
+        document.addEventListener("DOMContentLoaded", async () => {
+            await initPatient();
+            
+            document.getElementById("editNameBtn").addEventListener("click", editName);
+            document.getElementById("editPhoneBtn").addEventListener("click", editPhone);
+            
+            document.getElementById("patientName").addEventListener("dblclick", editName);
+            document.getElementById("patientPhone").addEventListener("dblclick", editPhone);
+            
+            // Автосинхронизация каждые 5 секунд
+            setInterval(syncData, 5000);
+        });
+    </script>
+</body>
+</html>
